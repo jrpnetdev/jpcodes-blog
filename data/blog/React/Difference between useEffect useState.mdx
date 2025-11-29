@@ -1,0 +1,284 @@
+---
+title: The difference between useEffect & useState in React
+date: '2025-11-11'
+tags: ['React', 'feature', 'code']
+draft: false
+summary: The difference between useEffect & useState in React
+---
+
+In React, **`useState`** and **`useEffect`** are both hooks, but they solve _very different_ problems.
+
+---
+
+## ✅ **`useState` – for storing and updating state**
+
+`useState` lets your component hold **data that changes over time**.
+
+### When to use:
+
+- You want to store a value (count, form input, toggle, etc.)
+- You want the UI to update when that value changes
+
+### Example:
+
+```jsx
+const [count, setCount] = useState(0)
+
+;<button onClick={() => setCount(count + 1)}>Add</button>
+```
+
+### Key idea:
+
+- Changing state triggers a **re-render** of the component.
+
+---
+
+## ✅ **`useEffect` – for running side effects**
+
+`useEffect` lets you run **code that happens outside the UI rendering process**, such as…
+
+### When to use:
+
+- Fetching API data
+- Subscribing/unsubscribing to events
+- Timers (`setTimeout`, `setInterval`)
+- Synchronizing localStorage
+- Running code _when props or state change_
+
+### Example:
+
+```jsx
+useEffect(() => {
+  console.log('Component mounted or count changed')
+}, [count])
+```
+
+### Key idea:
+
+- `useEffect` runs **after render**, not during it.
+
+---
+
+## 🔍 Summary Table
+
+| Feature             | `useState`                    | `useEffect`                             |
+| ------------------- | ----------------------------- | --------------------------------------- |
+| Purpose             | Store and update state        | Run side effects                        |
+| Triggers re-render? | ✔ Yes                        | ❌ No (but state changes inside it can) |
+| Runs during render? | ✔ Yes                        | ❌ No, runs after render                |
+| Typical uses        | UI data, form values, toggles | API calls, event listeners, timers      |
+
+---
+
+## 🎯 Simple understanding:
+
+- **`useState` = “I need to remember something.”**
+- **`useEffect` = “I need to do something when something changes.”**
+
+---
+
+Here are **simple examples + a real-world analogy** to clearly show the difference between `useState` and `useEffect`.
+
+---
+
+# 🔵 1. Simple Code Examples
+
+## **`useState` Example — Counting clicks**
+
+You store a number and update it when a button is clicked.
+
+```jsx
+function Counter() {
+  const [count, setCount] = useState(0)
+
+  return <button onClick={() => setCount(count + 1)}>Count: {count}</button>
+}
+```
+
+👉 `useState` is about **saving data** and **updating the UI**.
+
+---
+
+## **`useEffect` Example — Fetching data**
+
+You fetch data after the component renders.
+
+```jsx
+useEffect(() => {
+  fetch('https://api.example.com/users')
+    .then((res) => res.json())
+    .then((data) => console.log(data))
+}, [])
+```
+
+👉 `useEffect` is about **running effects outside React**, such as fetching data or setting timers.
+
+---
+
+# 🟢 2. Real-World Analogy
+
+### 📌 `useState` = A notebook inside your room
+
+You write something down and you can read it anytime.
+
+- Example: Your to-do list
+- When you update the list → **your room layout changes** (UI re-renders)
+
+---
+
+### 📌 `useEffect` = An alarm clock in your room
+
+It does something **after** a certain change or time.
+
+- Example: When you wake up, your alarm rings
+- When time changes → **the alarm performs a side action**
+
+It doesn’t change the room’s layout by itself—it just triggers actions **outside** the room.
+
+---
+
+# 🟣 3. How They Work Together
+
+Example: When the "city" state changes, fetch new weather data.
+
+```jsx
+const [city, setCity] = useState('London')
+
+useEffect(() => {
+  console.log('Fetching weather data for:', city)
+  // fetch API here...
+}, [city])
+```
+
+- `useState` stores **current city name**
+- `useEffect` runs **when city changes**
+
+---
+
+# 🟠 Final One-Line Difference
+
+- **`useState` → stores and updates data inside your component.**
+- **`useEffect` → runs side effects when the component renders or when data changes.**
+
+---
+
+Here is a clean **side-by-side visual diagram** comparing `useState` vs `useEffect` in an easy-to-remember way:
+
+---
+
+# 🔵 **useState vs useEffect — Side-by-Side Diagram**
+
+```
+┌──────────────────────────────┬────────────────────────────────┐
+│          useState            │            useEffect           │
+├──────────────────────────────┼────────────────────────────────┤
+│ Purpose:                     │ Purpose:                       │
+│ Store and update data        │ Run side effects (work outside │
+│ inside the component         │ React’s render cycle)          │
+├──────────────────────────────┼────────────────────────────────┤
+│ When it runs:                │ When it runs:                  │
+│ During render                │ After render                   │
+├──────────────────────────────┼────────────────────────────────┤
+│ What it does:                │ What it does:                  │
+│ Causes the UI to re-render   │ Does NOT re-render (unless     │
+│ when state changes           │ state inside it changes)       │
+├──────────────────────────────┼────────────────────────────────┤
+│ Typical uses:                │ Typical uses:                  │
+│ ✔ counters                   │ ✔ API calls                    │
+│ ✔ toggles                    │ ✔ event listeners              │
+│ ✔ form input values          │ ✔ setTimeout / setInterval     │
+│ ✔ UI state                   │ ✔ sync with localStorage       │
+├──────────────────────────────┼────────────────────────────────┤
+│ Code example:                │ Code example:                  │
+│ const [count, setCount] =    │ useEffect(() => {              │
+│   useState(0);               │   fetchData();                 │
+│                              │ }, []);                        │
+├──────────────────────────────┼────────────────────────────────┤
+│ Mental model:                │ Mental model:                  │
+│ “Remember this value.”       │ “Do something when things      │
+│                              │ change.”                       │
+└──────────────────────────────┴────────────────────────────────┘
+```
+
+---
+
+# 🎯 Quick Visual Summary
+
+```
+useState  →  Stores data  →  Triggers re-render
+useEffect →  Runs side effects → Runs after render
+```
+
+---
+
+Here is a clean, easy-to-read **ASCII flow diagram** showing how React flows with `useState` and `useEffect`:
+
+---
+
+# 🔵 **React Component Flow (with useState & useEffect)**
+
+### **ASCII Diagram**
+
+```
+                     ┌─────────────────────────┐
+                     │     Component Mounts     │
+                     └─────────────┬───────────┘
+                                   │
+                                   ▼
+                     ┌─────────────────────────┐
+                     │       Render UI          │
+                     │  (reads props + state)   │
+                     └─────────────┬───────────┘
+                                   │
+                     ┌─────────────┴─────────────┐
+                     │                           │
+                     ▼                           ▼
+          ┌──────────────────┐       ┌────────────────────────┐
+          │   useState       │       │     useEffect          │
+          │  returns state   │       │ runs AFTER render      │
+          │  + setState fn   │       │ (side effects here)    │
+          └─────────┬────────┘       └───────────┬────────────┘
+                    │                            │
+         User clicks │ setState(...)              │ dependencies change?
+                    │                            │
+                    ▼                            │
+        ┌─────────────────────────┐               │ Yes
+        │    State Updates        │◄──────────────┘
+        └─────────────┬──────────┘
+                      │ triggers
+                      ▼ re-render
+             ┌─────────────────────┐
+             │   Re-render UI      │
+             │ (read new state)    │
+             └──────────┬──────────┘
+                        │
+                        ▼
+             ┌─────────────────────┐
+             │ Run useEffect again │
+             │ if deps changed     │
+             └─────────────────────┘
+```
+
+---
+
+# 🔥 **Explanation of Flow**
+
+### **1. Component mounts**
+
+React reads your JSX and your hooks.
+
+### **2. React renders the UI**
+
+`useState` gives initial values.
+
+### **3. After UI is painted**
+
+`useEffect` runs **after** the render.
+
+### **4. When setState is called**
+
+- State changes
+- React **re-renders** the component
+- After re-render → `useEffect` runs again **if dependencies changed**
+
+---

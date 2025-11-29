@@ -1,0 +1,405 @@
+---
+title: Next.js Cheat Sheet
+date: '2025-11-10'
+tags: ['Next.js', 'Web', 'Coding']
+draft: false
+summary: 'Next.js Cheat Sheet'
+---
+
+## 1. Important Commands
+
+Use these commands to set up and manage your Next.js project.
+Create a new Next.js project
+
+    npx create-next-app@latest my-app
+
+Start the development server
+
+    npm run dev
+
+Build the application
+
+    npm run build
+
+Start the production server
+
+    npm start
+
+Lint the code
+
+    npm run lint
+
+## 2. Routing
+
+Next.js uses the file system to define routes in the app/ directory.
+Page Routes
+
+Each page.tsx file creates a new route.
+
+```
+// app/page.tsx (Root Page)
+// will be displayed at https://your-url.com
+export default function Home() {
+return <h1>Welcome to Next.js</h1>;
+}
+```
+
+```
+// app/about/page.tsx
+// will be displayed at https://your-url.com/about
+export default function About() {
+return <h1>About Us</h1>;
+}
+```
+
+Dynamic Routes
+
+Use brackets [] to create dynamic segments.
+
+```
+// app/products/[id]/page.tsx
+// will be displayed at https://your-url.com/product/:id
+export default function Product({ params }: { params: { id: string } }) {
+return <h1>Product {params.id}</h1>;
+}
+```
+
+Catch-All Routes
+
+```
+Use [...slug] to match multiple segments.
+
+// app/blog/[...slug]/page.tsx
+// will be displayed at https://your-url.com/blog/...
+export default function Blog({ params }: { params: { slug: string[] } }) {
+return <h1>Blog: {params.slug.join("/")}</h1>;
+}
+```
+
+Layouts
+
+Layouts allow shared components (e.g., headers, footers) across multiple pages.
+
+```
+// app/products/layout.tsx
+export default function Layout({ children }: { children: React.ReactNode }) {
+return (
+<div>
+<nav>Navbar</nav>
+{children}
+<footer>Footer</footer>
+</div>
+);
+}
+```
+
+Loading UI
+
+Automatically displays a loading state while fetching data.
+
+```
+// app/loading.tsx
+export default function Loading() {
+return <p>Loading...</p>;
+}
+```
+
+Error Handling
+
+Define error boundaries to catch and display errors.
+
+```
+// app/error.tsx
+'use client';
+export default function Error({ error }: { error: Error }) {
+return <p>Error: {error.message}</p>;
+}
+```
+
+## 3. Navigation
+
+Use < Link > for client-side navigation and useRouter for programmatic navigation.
+Using < Link >
+
+```
+import Link from "next/link";
+
+export default function Home() {
+return (
+<nav>
+<Link href="/about">About</Link>
+</nav>
+);
+}
+```
+
+Programmatic Navigation
+
+```
+"use client";
+import { useRouter } from "next/navigation";
+
+export default function Page() {
+const router = useRouter();
+return (
+<button onClick={() => router.push("/dashboard")}>Go to Dashboard</button>
+);
+}
+```
+
+## 4. Styling
+
+Next.js supports global styles, CSS modules, and utility-first frameworks like Tailwind CSS.
+Global Styles
+
+```
+// app/globals.css
+body {
+font-family: sans-serif;
+}
+```
+
+CSS Modules
+
+Locally scoped styles using .module.css.
+
+```
+// app/styles/button.module.css
+.button {
+background-color: blue;
+color: white;
+}
+```
+
+```
+// app/page.tsx
+import styles from "../styles/button.module.css";
+
+export default function Home() {
+return <button className={styles.button}>Click me</button>;
+}
+```
+
+Tailwind CSS
+
+A utility-first CSS framework for styling. Can be automatically installed, when setting up the Next.js project: npx create-next-app@latest my-app --tailwind
+
+```
+// tailwind.config.js
+module.exports = {
+content: ["./app/**/*.{js,ts,jsx,tsx}"]
+};
+```
+
+```
+// app/page.tsx
+export default function Home() {
+return <h1 className="text-2xl font-bold">Hello, Tailwind!</h1>;
+}
+```
+
+## 5. Optimization
+
+Next.js provides built-in optimizations for performance.
+Image Optimization
+
+Use next/image for optimized images.
+
+```
+import Image from "next/image";
+
+export default function Home() {
+return <Image src="/image.jpg" width={500} height={300} alt="Example" />;
+}
+```
+
+Font Optimization
+
+Load and optimize Google Fonts.
+
+```
+import { Inter } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin"] });
+
+export default function Home() {
+return <h1 className={inter.className}>Optimized Font</h1>;
+}
+```
+
+Metadata
+
+Define page metadata for SEO.
+
+```
+export const metadata = {
+title: "My Page",
+description: "This is my page description",
+};
+```
+
+Scripts
+
+```
+Load external scripts efficiently.
+
+import Script from "next/script";
+
+export default function Page() {
+return (
+<>
+<Script src="https://example.com/script.js" strategy="lazyOnload" />
+</>
+);
+}
+```
+
+## 6. Data Fetching
+
+Next.js provides various ways to fetch data depending on the use case. Supports fetching data in both Server Components and Client Components.
+Fetching Data in a Server Component
+
+Uses fetch directly inside an async function in a server component.
+
+```
+async function getData() {
+const res = await fetch("https://api.example.com/data");
+return res.json();
+}
+```
+
+```
+export default async function Page() {
+const data = await getData();
+return <pre>{JSON.stringify(data, null, 2)}</pre>;
+}
+```
+
+Fetching Data in a Client Component
+
+Uses useEffect and useState for fetching data on the client side.
+
+```
+"use client";
+import { useEffect, useState } from "react";
+
+export default function Page() {
+const [data, setData] = useState(null);
+
+useEffect(() => {
+fetch("https://api.example.com/data")
+.then((res) => res.json())
+.then(setData);
+}, []);
+
+return <pre>{JSON.stringify(data, null, 2)}</pre>;
+}
+```
+
+## 7. Rendering Strategies
+
+Next.js supports different rendering strategies based on performance and data needs.
+Server-Side Rendering (SSR)
+
+Fetches data on each request at runtime.
+
+```
+export default async function Page() {
+const res = await fetch("https://api.example.com/data", {
+cache: "no-store",
+});
+const data = await res.json();
+return <pre>{JSON.stringify(data, null, 2)}</pre>;
+}
+```
+
+Static Site Generation (SSG)
+
+Fetches data at build time and serves static content.
+
+```
+export default async function Page() {
+const res = await fetch("https://api.example.com/data", {
+cache: "force-cache",
+});
+const data = await res.json();
+return <pre>{JSON.stringify(data, null, 2)}</pre>;
+}
+```
+
+Incremental Static Regeneration (ISR)
+
+Allows static pages to be updated periodically without rebuilding the entire site.
+
+```
+export default async function Page() {
+const res = await fetch("https://api.example.com/data", {
+cache: "force-cache",
+next: { revalidate: 30 },
+});
+const data = await res.json();
+return <pre>{JSON.stringify(data, null, 2)}</pre>;
+}
+```
+
+Client-Side Rendering (CSR)
+
+Fetches data on the client after the initial HTML is loaded.
+
+```
+"use client";
+import { useEffect, useState } from "react";
+
+export default function Page() {
+const [data, setData] = useState(null);
+
+useEffect(() => {
+fetch("https://api.example.com/data")
+.then((res) => res.json())
+.then(setData);
+}, []);
+
+return <pre>{JSON.stringify(data, null, 2)}</pre>;
+}
+```
+
+## 8. Server Actions and Mutations
+
+Server actions allow secure mutations directly from the frontend.
+Server Actions
+
+```
+"use server";
+
+export async function createPostAction(data: { title: string; content: string }) {
+const res = await fetch("https://api.example.com/posts", {
+method: "POST",
+body: JSON.stringify(data),
+headers: { "Content-Type": "application/json" },
+});
+return res.json();
+}
+```
+
+Using Server Actions in a Client Component
+
+```
+"use client";
+import { createPostAction } from "../actions";
+
+export default function CreatePost() {
+const handleSubmit = async () => {
+await createPostAction({ title: "My Post", content: "Hello world!" });
+};
+
+return <button onClick={handleSubmit}>Create Post</button>;
+}
+```
+
+## Links
+
+- see also links
+
+[Gist - Next.js 14 Cheat Sheet](https://gist.github.com/lucasKoyama/7545e28e857a8045976ab9988d0b0353)
+
+[wrappixel.com - NextJs Cheat Sheet: Ultimate Guide for Next.js developers 2025](https://www.wrappixel.com/nextjs-cheat-sheet/?srsltid=AfmBOooeTU0KjQZ3eS5cKGBGrsNwZ2WIMRnQ_VHw-3X9PYodtR7-Sy1J)

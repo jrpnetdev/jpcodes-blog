@@ -1,0 +1,1065 @@
+---
+title: Next.js server actions vs React fetch
+date: '2025-11-12'
+tags: ['multi-author', 'next-js', 'feature']
+draft: false
+summary: 'Next.js server actions vs React fetch'
+---
+
+### 🔹 First, quick definitions
+
+- **React fetch request:**
+  A client-side data request, typically using `fetch()` or libraries like Axios. The request happens in the browser after the page loads.
+
+- **Next.js Server Actions:**
+  Introduced in Next.js 13.4+, Server Actions let you run server-side code (like database writes, API calls, etc.) directly from your React components or forms — **without a separate API route or client fetch**.
+
+---
+
+### ⚡ Key Benefits of Server Actions Over Client Fetch
+
+| Category                  | Server Actions                                                                                                                  | Client Fetch (React fetch)                                                                                 |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Performance**           | Runs **on the server**, so no client JS needed for fetching/mutating. Reduces bundle size and improves load times.              | Runs **in the browser**, so you ship more JS to the client and wait for hydration before the request runs. |
+| **Security**              | Keeps secrets (API keys, DB credentials) **on the server** — not exposed to the client.                                         | Requires an exposed API endpoint or proxy; risk of leaking keys or sensitive logic.                        |
+| **Simplicity**            | No need to define a separate `/api` route — you can call server functions **directly from a form or component**.                | Requires defining and maintaining API routes, handling fetch, error states, and request logic separately.  |
+| **Data Freshness**        | Runs on the server, so it automatically integrates with **Next.js caching & revalidation** strategies.                          | You have to manually handle caching or revalidation (e.g., using SWR or React Query).                      |
+| **Streaming & Rendering** | Can integrate directly with **React Server Components (RSC)** — allowing for **progressive rendering and streaming** responses. | Client fetch happens after render, so no streaming benefits.                                               |
+| **Bundle Size**           | No client JS bundle for server action logic — less JS shipped.                                                                  | Fetch logic and state handling stay in the client bundle.                                                  |
+| **Form Handling**         | Supports **native `<form>` submissions** directly to server functions (no JavaScript needed).                                   | Requires custom JS to handle form submissions and fetch requests.                                          |
+| **Consistency**           | Unified server execution model (DB access, API calls, and mutations in one place).                                              | You need separate APIs or endpoints to bridge client and server.                                           |
+
+---
+
+### 🧠 Example Comparison
+
+**✅ Using a Server Action**
+
+```tsx
+// app/page.tsx
+'use server'
+
+export async function addTodo(formData: FormData) {
+  const todo = formData.get('todo') as string
+  await db.todo.create({ data: { text: todo } })
+}
+
+// In your component:
+;<form action={addTodo}>
+  <input name="todo" type="text" />
+  <button type="submit">Add</button>
+</form>
+```
+
+- No API route.
+- No `fetch()` call.
+- No client JS for submission logic.
+
+---
+
+**❌ Using Client Fetch**
+
+```tsx
+// pages/api/add-todo.ts
+export default async function handler(req, res) {
+  const { todo } = req.body
+  await db.todo.create({ data: { text: todo } })
+  res.status(200).json({ success: true })
+}
+
+// In your component:
+async function handleSubmit(e) {
+  e.preventDefault()
+  await fetch('/api/add-todo', {
+    method: 'POST',
+    body: JSON.stringify({ todo }),
+  })
+}
+```
+
+- You need an API route.
+- You ship more JS.
+- Harder to integrate with server-side rendering.
+
+---
+
+### 🚀 When to Use Which
+
+- ✅ **Use Server Actions** for:
+  - CRUD operations that interact with your database.
+  - Secure server-side logic.
+  - Form submissions.
+  - Reducing client JS bundle size.
+
+- ⚠️ **Use Client Fetch** when:
+  - You need **real-time** or **frequently updating** data on the client.
+  - You need to fetch from **external APIs** dynamically after page load.
+  - You’re not using Next.js (e.g., plain React).
+
+---
+
+### 💡 TL;DR
+
+> **Server Actions = Secure, faster, simpler server-side data handling**
+> **Client Fetch = Dynamic, client-driven interactions after page load**
+
+---
+
+Let’s walk through a **side-by-side example** of how you’d build a simple **Todo CRUD** operation in **Next.js**, first using **React client fetch**, then using **Next.js Server Actions**.
+
+We’ll focus on the **“Add Todo”** operation — that’s enough to clearly see the architectural differences.
+
+---
+
+## 🧩 Scenario
+
+We want a page that:
+
+- Displays a list of todos from a database
+- Lets the user add a new todo item
+
+We’ll assume we have a database function like this:
+
+```ts
+// lib/db.ts
+export const db = {
+  todos: [] as { id: number; text: string }[],
+  async getTodos() {
+    return this.todos
+  },
+  async addTodo(text: string) {
+    this.todos.push({ id: Date.now(), text })
+  },
+}
+```
+
+---
+
+## ⚙️ OPTION 1 — Using **React Fetch** (Client-side Request)
+
+### `/pages/api/add-todo.ts`
+
+We need a dedicated API route to handle server logic:
+
+```ts
+// pages/api/add-todo.ts
+import { db } from '@/lib/db'
+
+export default async function handler(req, res) {
+  if (req.method === 'POST') {
+    const { text } = JSON.parse(req.body)
+    await db.addTodo(text)
+    res.status(200).json({ success: true })
+  } else {
+    res.status(405).end()
+  }
+}
+```
+
+### `app/page.tsx`
+
+We do the fetching in the client:
+
+```tsx
+'use client'
+
+import { useState, useEffect } from 'react'
+
+export default function Page() {
+  const [todos, setTodos] = useState<{ id: number; text: string }[]>([])
+  const [newTodo, setNewTodo] = useState('')
+
+  useEffect(() => {
+    fetch('/api/get-todos') // assume another API route
+      .then((res) => res.json())
+      .then((data) => setTodos(data.todos))
+  }, [])
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    await fetch('/api/add-todo', {
+      method: 'POST',
+      body: JSON.stringify({ text: newTodo }),
+    })
+    setTodos([...todos, { id: Date.now(), text: newTodo }])
+    setNewTodo('')
+  }
+
+  return (
+    <div className="p-4">
+      <form onSubmit={handleSubmit}>
+        <input
+          value={newTodo}
+          onChange={(e) => setNewTodo(e.target.value)}
+          className="border px-2 py-1"
+          placeholder="New todo"
+        />
+        <button className="ml-2 bg-blue-500 px-3 py-1 text-white">Add</button>
+      </form>
+
+      <ul className="mt-4">
+        {todos.map((t) => (
+          <li key={t.id}>{t.text}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+🧠 **Notes**
+
+- All logic runs in the browser after hydration.
+- API routes expose endpoints (you must secure them).
+- More client JS shipped.
+- More boilerplate (API + fetch + state handling).
+
+---
+
+## 🚀 OPTION 2 — Using **Next.js Server Actions**
+
+Now let’s rewrite it in the new Server Actions style (Next.js 14+).
+
+### `app/actions.ts`
+
+```ts
+'use server'
+
+import { db } from '@/lib/db'
+import { revalidatePath } from 'next/cache'
+
+export async function addTodo(formData: FormData) {
+  const text = formData.get('text') as string
+  await db.addTodo(text)
+  revalidatePath('/') // refresh data on the home page
+}
+```
+
+### `app/page.tsx`
+
+```tsx
+import { db } from '@/lib/db'
+import { addTodo } from './actions'
+
+export default async function Page() {
+  const todos = await db.getTodos()
+
+  return (
+    <div className="p-4">
+      <form action={addTodo}>
+        <input name="text" className="border px-2 py-1" placeholder="New todo" />
+        <button className="ml-2 bg-blue-500 px-3 py-1 text-white">Add</button>
+      </form>
+
+      <ul className="mt-4">
+        {todos.map((t) => (
+          <li key={t.id}>{t.text}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+🧠 **Notes**
+
+- No API route.
+- No `fetch()`.
+- No client-side JS needed for the form.
+- Secure (runs only on the server).
+- Integrated caching (`revalidatePath` refreshes page data).
+- Smaller bundle, faster initial render.
+
+---
+
+## ⚖️ Summary
+
+| Feature                       | React Fetch                      | Server Actions                               |
+| ----------------------------- | -------------------------------- | -------------------------------------------- |
+| API route required            | ✅ Yes                           | ❌ No                                        |
+| Client JS needed              | ✅ Yes                           | ❌ No                                        |
+| Access to server-side secrets | ❌ No                            | ✅ Yes                                       |
+| Cache integration             | Manual                           | Built-in (`revalidatePath`, `revalidateTag`) |
+| Bundle size                   | Larger                           | Smaller                                      |
+| Simplicity                    | More boilerplate                 | Cleaner                                      |
+| Best for                      | Dynamic, client-interactive apps | Forms, DB mutations, server logic            |
+
+---
+
+## 💡 Key Takeaway
+
+> **Server Actions let you treat the server as a natural extension of your React components.**
+>
+> You write less code, ship less JS, and gain stronger security — without sacrificing developer experience.
+
+---
+
+Now let’s extend our example to a **full CRUD Todo App** in **Next.js 14+** using **Server Actions**, and then contrast it with how you’d do the same thing using **client fetches**.
+
+We’ll go step by step, starting with the **Server Actions** version (the modern, preferred way).
+
+---
+
+## 🚀 PART 1 — FULL CRUD with **Next.js Server Actions**
+
+### 🧱 Setup
+
+```ts
+// lib/db.ts
+export type Todo = { id: number; text: string; done: boolean }
+
+export const db = {
+  todos: [] as Todo[],
+
+  async getTodos() {
+    return this.todos
+  },
+  async addTodo(text: string) {
+    this.todos.push({ id: Date.now(), text, done: false })
+  },
+  async toggleTodo(id: number) {
+    const todo = this.todos.find((t) => t.id === id)
+    if (todo) todo.done = !todo.done
+  },
+  async deleteTodo(id: number) {
+    this.todos = this.todos.filter((t) => t.id !== id)
+  },
+}
+```
+
+---
+
+### ⚙️ Server Actions
+
+Create an `app/actions.ts` file:
+
+```ts
+'use server'
+
+import { db } from '@/lib/db'
+import { revalidatePath } from 'next/cache'
+
+export async function addTodo(formData: FormData) {
+  const text = formData.get('text') as string
+  if (!text.trim()) return
+  await db.addTodo(text)
+  revalidatePath('/')
+}
+
+export async function toggleTodo(id: number) {
+  await db.toggleTodo(id)
+  revalidatePath('/')
+}
+
+export async function deleteTodo(id: number) {
+  await db.deleteTodo(id)
+  revalidatePath('/')
+}
+```
+
+---
+
+### 🖥️ UI: `app/page.tsx`
+
+```tsx
+import { db } from '@/lib/db'
+import { addTodo, toggleTodo, deleteTodo } from './actions'
+
+export default async function Page() {
+  const todos = await db.getTodos()
+
+  return (
+    <div className="mx-auto max-w-md p-8">
+      <h1 className="mb-4 text-2xl font-bold">✅ Todo List (Server Actions)</h1>
+
+      <form action={addTodo} className="flex gap-2">
+        <input name="text" className="flex-1 rounded border px-3 py-2" placeholder="New todo..." />
+        <button className="rounded bg-blue-600 px-4 py-2 text-white">Add</button>
+      </form>
+
+      <ul className="mt-6 space-y-2">
+        {todos.map((todo) => (
+          <li key={todo.id} className="flex items-center justify-between rounded border px-3 py-2">
+            <form action={async () => toggleTodo(todo.id)}>
+              <button className={`${todo.done ? 'text-gray-400 line-through' : ''} text-left`}>
+                {todo.text}
+              </button>
+            </form>
+
+            <form action={async () => deleteTodo(todo.id)}>
+              <button className="text-red-500">✕</button>
+            </form>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+🧠 **What’s happening here**
+
+- Each `<form>` submits directly to a **Server Action**.
+- No client JavaScript needed.
+- No API routes.
+- Revalidation automatically refreshes data after each action.
+- Secure — all database logic runs **only on the server**.
+
+---
+
+## ⚙️ Optional: Optimistic UI (Next 14.2+)
+
+You can make actions feel instant using `useOptimistic` or **Server Action status**:
+
+```tsx
+'use client'
+
+import { experimental_useOptimistic as useOptimistic } from 'react'
+
+function TodoList({ todos }) {
+  const [optimisticTodos, addOptimisticTodo] = useOptimistic(todos)
+
+  return (
+    <form
+      action={async (formData) => {
+        addOptimisticTodo([
+          ...optimisticTodos,
+          { id: Date.now(), text: formData.get('text'), done: false },
+        ])
+        await addTodo(formData)
+      }}
+    >
+      {/* ... */}
+    </form>
+  )
+}
+```
+
+---
+
+## ⚖️ PART 2 — Same CRUD App Using **Client Fetch + API Routes**
+
+### `/pages/api/todos.ts`
+
+```ts
+import { db } from '@/lib/db'
+
+export default async function handler(req, res) {
+  if (req.method === 'GET') {
+    res.json(await db.getTodos())
+  } else if (req.method === 'POST') {
+    const { text } = JSON.parse(req.body)
+    await db.addTodo(text)
+    res.status(200).json({ success: true })
+  } else if (req.method === 'PATCH') {
+    const { id } = JSON.parse(req.body)
+    await db.toggleTodo(id)
+    res.status(200).json({ success: true })
+  } else if (req.method === 'DELETE') {
+    const { id } = JSON.parse(req.body)
+    await db.deleteTodo(id)
+    res.status(200).json({ success: true })
+  }
+}
+```
+
+### `app/page.tsx`
+
+```tsx
+'use client'
+import { useEffect, useState } from 'react'
+
+export default function Page() {
+  const [todos, setTodos] = useState([])
+  const [text, setText] = useState('')
+
+  async function loadTodos() {
+    const res = await fetch('/api/todos')
+    const data = await res.json()
+    setTodos(data)
+  }
+
+  useEffect(() => {
+    loadTodos()
+  }, [])
+
+  async function add() {
+    await fetch('/api/todos', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    })
+    setText('')
+    loadTodos()
+  }
+
+  async function toggle(id) {
+    await fetch('/api/todos', {
+      method: 'PATCH',
+      body: JSON.stringify({ id }),
+    })
+    loadTodos()
+  }
+
+  async function del(id) {
+    await fetch('/api/todos', {
+      method: 'DELETE',
+      body: JSON.stringify({ id }),
+    })
+    loadTodos()
+  }
+
+  return (
+    <div className="mx-auto max-w-md p-8">
+      <h1 className="mb-4 text-2xl font-bold">🧱 Todo List (Client Fetch)</h1>
+      <div className="flex gap-2">
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="flex-1 rounded border px-3 py-2"
+        />
+        <button onClick={add} className="rounded bg-blue-600 px-4 py-2 text-white">
+          Add
+        </button>
+      </div>
+
+      <ul className="mt-6 space-y-2">
+        {todos.map((todo) => (
+          <li key={todo.id} className="flex items-center justify-between rounded border px-3 py-2">
+            <button
+              onClick={() => toggle(todo.id)}
+              className={todo.done ? 'text-gray-400 line-through' : ''}
+            >
+              {todo.text}
+            </button>
+            <button onClick={() => del(todo.id)} className="text-red-500">
+              ✕
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+🧠 **What’s different**
+
+- More code (API + client logic + fetch handling).
+- Everything runs on the client after hydration.
+- API routes are exposed.
+- You need to reload state manually after each mutation.
+- Larger JS bundle.
+
+---
+
+## 🧾 Comparison Summary
+
+| Feature                   | Server Actions            | Client Fetch                    |
+| ------------------------- | ------------------------- | ------------------------------- |
+| API route needed          | ❌ No                     | ✅ Yes                          |
+| Security                  | ✅ Secrets stay on server | ⚠️ Must secure API endpoints    |
+| Data updates              | Automatic revalidation    | Manual state reload             |
+| JS bundle                 | Smaller (server-driven)   | Larger (client logic)           |
+| Simplicity                | Directly call server code | Must maintain API & fetch logic |
+| Offline or real-time use  | ⚠️ Limited                | ✅ Easier                       |
+| DX (developer experience) | ✅ Cleaner                | 😐 More boilerplate             |
+
+---
+
+### 🏁 TL;DR
+
+- **Next.js Server Actions** make CRUD **cleaner, safer, and faster** for standard web apps.
+- **Client fetch** still has its place for **real-time**, **client-heavy**, or **offline-first** scenarios.
+
+---
+
+Would you like me to extend this example next to include **optimistic updates with server actions** (so that UI updates instantly before the server response)?
+
+Awesome 😎 — let’s take your Next.js **Server Actions CRUD app** to the next level by adding **Optimistic UI updates**.
+
+This will make the app feel **instant**, even though the server is still processing the action.
+
+---
+
+## 🧠 What’s “Optimistic UI”?
+
+An **optimistic update** means:
+
+> The UI updates immediately _as if the operation succeeded_, and only rolls back if the server action fails.
+
+It’s especially useful for things like Todos, Likes, Comments, etc.
+
+In Next.js (React 18+), we can do this using the React hook:
+
+```tsx
+import { useOptimistic } from 'react'
+```
+
+This works with **Server Actions** — it lets us optimistically mutate state _before_ the server finishes.
+
+---
+
+## 🚀 Example: Optimistic Todo CRUD with Server Actions
+
+We’ll build on the previous example.
+Let’s focus on **Add**, **Toggle**, and **Delete** with instant UI feedback.
+
+---
+
+### `lib/db.ts`
+
+Same as before:
+
+```ts
+export type Todo = { id: number; text: string; done: boolean }
+
+export const db = {
+  todos: [] as Todo[],
+  async getTodos() {
+    return this.todos
+  },
+  async addTodo(text: string) {
+    this.todos.push({ id: Date.now(), text, done: false })
+  },
+  async toggleTodo(id: number) {
+    const todo = this.todos.find((t) => t.id === id)
+    if (todo) todo.done = !todo.done
+  },
+  async deleteTodo(id: number) {
+    this.todos = this.todos.filter((t) => t.id !== id)
+  },
+}
+```
+
+---
+
+### `app/actions.ts`
+
+Server-side mutations:
+
+```ts
+'use server'
+
+import { db } from '@/lib/db'
+import { revalidatePath } from 'next/cache'
+
+export async function addTodo(formData: FormData) {
+  const text = formData.get('text') as string
+  if (!text.trim()) return
+  await db.addTodo(text)
+  revalidatePath('/')
+}
+
+export async function toggleTodoAction(id: number) {
+  await db.toggleTodo(id)
+  revalidatePath('/')
+}
+
+export async function deleteTodoAction(id: number) {
+  await db.deleteTodo(id)
+  revalidatePath('/')
+}
+```
+
+---
+
+### `app/page.tsx` (Server Component)
+
+Here’s the main page — it renders the todos list and includes a **Client Component** for interactivity.
+
+```tsx
+import { db } from '@/lib/db'
+import TodoList from './todo-list'
+
+export default async function Page() {
+  const todos = await db.getTodos()
+
+  return (
+    <div className="mx-auto max-w-md p-8">
+      <h1 className="mb-4 text-2xl font-bold">✨ Optimistic Todo App</h1>
+      <TodoList todos={todos} />
+    </div>
+  )
+}
+```
+
+---
+
+### `app/todo-list.tsx` (Client Component)
+
+This is where the **magic happens** — we use `useOptimistic` to instantly update UI.
+
+```tsx
+'use client'
+
+import { useOptimistic, useState } from 'react'
+import { addTodo, toggleTodoAction, deleteTodoAction } from './actions'
+import type { Todo } from '@/lib/db'
+
+export default function TodoList({ todos }: { todos: Todo[] }) {
+  const [optimisticTodos, addOptimisticTodo] = useOptimistic(
+    todos,
+    (currentTodos, newTodo: Todo | { id: number; delete?: boolean; toggle?: boolean }) => {
+      // Handle add
+      if ('text' in newTodo && !('delete' in newTodo) && !('toggle' in newTodo)) {
+        return [...currentTodos, newTodo as Todo]
+      }
+
+      // Handle delete
+      if (newTodo.delete) {
+        return currentTodos.filter((t) => t.id !== newTodo.id)
+      }
+
+      // Handle toggle
+      if (newTodo.toggle) {
+        return currentTodos.map((t) => (t.id === newTodo.id ? { ...t, done: !t.done } : t))
+      }
+
+      return currentTodos
+    }
+  )
+
+  const [text, setText] = useState('')
+
+  async function handleAdd(formData: FormData) {
+    const text = formData.get('text') as string
+    const optimisticTodo: Todo = { id: Date.now(), text, done: false }
+    addOptimisticTodo(optimisticTodo)
+    setText('')
+    await addTodo(formData)
+  }
+
+  async function handleToggle(id: number) {
+    addOptimisticTodo({ id, toggle: true })
+    await toggleTodoAction(id)
+  }
+
+  async function handleDelete(id: number) {
+    addOptimisticTodo({ id, delete: true })
+    await deleteTodoAction(id)
+  }
+
+  return (
+    <>
+      <form action={handleAdd} className="mb-4 flex gap-2">
+        <input
+          name="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="flex-1 rounded border px-3 py-2"
+          placeholder="New todo..."
+        />
+        <button type="submit" className="rounded bg-blue-600 px-4 py-2 text-white">
+          Add
+        </button>
+      </form>
+
+      <ul className="space-y-2">
+        {optimisticTodos.map((todo) => (
+          <li key={todo.id} className="flex items-center justify-between rounded border px-3 py-2">
+            <button
+              onClick={() => handleToggle(todo.id)}
+              className={todo.done ? 'text-gray-400 line-through' : ''}
+            >
+              {todo.text}
+            </button>
+            <button onClick={() => handleDelete(todo.id)} className="text-red-500">
+              ✕
+            </button>
+          </li>
+        ))}
+      </ul>
+    </>
+  )
+}
+```
+
+---
+
+### 🧩 How It Works
+
+1. When you **add**, **toggle**, or **delete** a todo:
+   - The `useOptimistic` state updates immediately (so UI feels instant).
+   - Then the **server action** runs.
+   - Once it’s done, Next.js revalidates and syncs with the real data.
+
+2. If the server fails (rare), the data reverts automatically on next load.
+
+3. Because the optimistic state is **local**, users feel no lag.
+
+---
+
+### ⚡ Benefits
+
+| Feature         | Without Optimistic UI     | With Optimistic UI                 |
+| --------------- | ------------------------- | ---------------------------------- |
+| Perceived speed | Slower (waits for server) | Instant feedback                   |
+| User experience | Feels delayed             | Feels real-time                    |
+| Implementation  | Simple but static         | Slightly more code, much better UX |
+| Data sync       | Server-driven only        | Local + server hybrid              |
+
+---
+
+### 💡 Pro Tip
+
+You can even combine this with:
+
+- `useTransition` for pending state management (showing a loading spinner)
+- `useFormStatus` (from React 18) to disable buttons while submitting
+
+---
+
+### 🏁 Summary
+
+✅ **Server Actions** give you:
+
+- Simpler, secure server logic
+- No client fetch overhead
+- Built-in revalidation
+
+✨ **Optimistic UI** adds:
+
+- Instant visual feedback
+- Smoother, app-like experience
+
+Together → a fast, secure, and reactive UX **without client-side state libraries or APIs**.
+
+---
+
+Would you like me to add **loading & disabled button states** using `useTransition` and `useFormStatus` next, so users see subtle feedback while actions are running?
+
+Perfect 👌 — this next step will make your **Next.js Server Actions + Optimistic UI** app feel _ultra polished_.
+
+We’ll add **loading indicators** and **disabled buttons** using:
+
+- `useTransition` → for tracking async work and showing “pending” UI
+- `useFormStatus` → for disabling buttons during form submission (great for `<form action={serverAction}>` patterns)
+
+---
+
+## ⚙️ Full Example: Optimistic Todo App + Loading States
+
+We’ll build on the previous optimistic CRUD app.
+
+---
+
+### 🧱 `lib/db.ts`
+
+Same as before:
+
+```ts
+export type Todo = { id: number; text: string; done: boolean }
+
+export const db = {
+  todos: [] as Todo[],
+  async getTodos() {
+    return this.todos
+  },
+  async addTodo(text: string) {
+    this.todos.push({ id: Date.now(), text, done: false })
+  },
+  async toggleTodo(id: number) {
+    const todo = this.todos.find((t) => t.id === id)
+    if (todo) todo.done = !todo.done
+  },
+  async deleteTodo(id: number) {
+    this.todos = this.todos.filter((t) => t.id !== id)
+  },
+}
+```
+
+---
+
+### ⚙️ `app/actions.ts`
+
+Server actions with cache revalidation:
+
+```ts
+'use server'
+
+import { db } from '@/lib/db'
+import { revalidatePath } from 'next/cache'
+
+export async function addTodo(formData: FormData) {
+  const text = formData.get('text') as string
+  if (!text.trim()) return
+  await db.addTodo(text)
+  revalidatePath('/')
+}
+
+export async function toggleTodoAction(id: number) {
+  await db.toggleTodo(id)
+  revalidatePath('/')
+}
+
+export async function deleteTodoAction(id: number) {
+  await db.deleteTodo(id)
+  revalidatePath('/')
+}
+```
+
+---
+
+### 🖥️ `app/page.tsx`
+
+Server component — fetches todos and passes them to the client component.
+
+```tsx
+import { db } from '@/lib/db'
+import TodoList from './todo-list'
+
+export default async function Page() {
+  const todos = await db.getTodos()
+  return (
+    <main className="mx-auto max-w-md p-8">
+      <h1 className="mb-4 text-2xl font-bold">⚡️ Optimistic Todo App</h1>
+      <TodoList todos={todos} />
+    </main>
+  )
+}
+```
+
+---
+
+### 🧩 `app/todo-list.tsx` (Client Component)
+
+Here’s where we add **optimistic UI**, **loading**, and **disabled states**.
+
+```tsx
+'use client'
+
+import { useOptimistic, useState, useTransition } from 'react'
+import { useFormStatus } from 'react-dom'
+import { addTodo, toggleTodoAction, deleteTodoAction } from './actions'
+import type { Todo } from '@/lib/db'
+
+export default function TodoList({ todos }: { todos: Todo[] }) {
+  const [optimisticTodos, updateOptimisticTodos] = useOptimistic(
+    todos,
+    (currentTodos, action: any) => {
+      if (action.type === 'add') return [...currentTodos, action.todo]
+      if (action.type === 'toggle')
+        return currentTodos.map((t) => (t.id === action.id ? { ...t, done: !t.done } : t))
+      if (action.type === 'delete') return currentTodos.filter((t) => t.id !== action.id)
+      return currentTodos
+    }
+  )
+
+  const [text, setText] = useState('')
+  const [isPending, startTransition] = useTransition()
+
+  // ✅ Optimistic add
+  async function handleAdd(formData: FormData) {
+    const text = formData.get('text') as string
+    const optimisticTodo: Todo = { id: Date.now(), text, done: false }
+    updateOptimisticTodos({ type: 'add', todo: optimisticTodo })
+    setText('')
+    startTransition(async () => {
+      await addTodo(formData)
+    })
+  }
+
+  // ✅ Optimistic toggle
+  async function handleToggle(id: number) {
+    updateOptimisticTodos({ type: 'toggle', id })
+    startTransition(async () => {
+      await toggleTodoAction(id)
+    })
+  }
+
+  // ✅ Optimistic delete
+  async function handleDelete(id: number) {
+    updateOptimisticTodos({ type: 'delete', id })
+    startTransition(async () => {
+      await deleteTodoAction(id)
+    })
+  }
+
+  return (
+    <>
+      <form action={handleAdd} className="mb-4 flex gap-2">
+        <input
+          name="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="flex-1 rounded border px-3 py-2"
+          placeholder="New todo..."
+          disabled={isPending}
+        />
+        <SubmitButton pending={isPending} />
+      </form>
+
+      <ul className="space-y-2">
+        {optimisticTodos.map((todo) => (
+          <li key={todo.id} className="flex items-center justify-between rounded border px-3 py-2">
+            <button
+              onClick={() => handleToggle(todo.id)}
+              disabled={isPending}
+              className={`transition ${todo.done ? 'text-gray-400 line-through' : ''}`}
+            >
+              {todo.text}
+            </button>
+            <button
+              onClick={() => handleDelete(todo.id)}
+              disabled={isPending}
+              className="text-red-500"
+            >
+              ✕
+            </button>
+          </li>
+        ))}
+      </ul>
+    </>
+  )
+}
+```
+
+---
+
+### 🧠 Helper Component — `SubmitButton`
+
+We use `useFormStatus` to disable the button and show a spinner only while the form is submitting:
+
+```tsx
+'use client'
+import { useFormStatus } from 'react-dom'
+
+export function SubmitButton({ pending }: { pending: boolean }) {
+  const { pending: formPending } = useFormStatus()
+
+  const isBusy = pending || formPending
+
+  return (
+    <button
+      type="submit"
+      disabled={isBusy}
+      className={`${
+        isBusy ? 'cursor-not-allowed bg-gray-400' : 'bg-blue-600'
+      } rounded px-4 py-2 text-white`}
+    >
+      {isBusy ? 'Adding...' : 'Add'}
+    </button>
+  )
+}
+```
+
+---
+
+### 💅 UX Improvements
+
+✅ **Instant optimistic updates**
+✅ **“Adding…” button feedback**
+✅ **Disabled form while pending**
+✅ **Smooth state transitions** (thanks to `useTransition`)
+
+Users will feel like everything happens instantly — no lag, no flash, no waiting.
+
+---
+
+### 🧾 Summary
+
+| Feature             | Hook Used       | Benefit                                      |
+| ------------------- | --------------- | -------------------------------------------- |
+| Optimistic UI       | `useOptimistic` | Instant updates before server completes      |
+| Pending feedback    | `useTransition` | Tracks async work to show loading state      |
+| Form button control | `useFormStatus` | Auto-disable submit button during submission |

@@ -1,0 +1,465 @@
+---
+title: Bulletproof React
+date: '2025-11-02'
+tags: ['React', 'GitHub', 'architecture']
+draft: false
+summary: Bulletproof React
+---
+
+**Bulletproof React** is an open-source project and architecture guide for building **scalable, maintainable, and production-ready React applications**. It isn’t a framework or library, but rather a **set of best practices**, folder structures, patterns, and conventions you can follow to avoid common pitfalls when apps grow large.
+
+https://github.com/alan2207/bulletproof-react
+
+### 🔍 What Bulletproof React Provides
+
+- **Recommended project structure**
+  A clear, opinionated folder organization to keep code modular and maintainable.
+- **Best practices for React + TypeScript**
+  Guidance on typing, component patterns, hooks, and state management.
+- **Architectural patterns**
+  How to separate concerns (UI, business logic, data fetching).
+- **Scalable abstractions**
+  Feature-based and domain-driven approaches that grow with your project.
+- **Examples of real-world patterns**
+  Including caching, testing, environment handling, API layers, and more.
+
+### 💡 Why It's Popular
+
+Developers like Bulletproof React because it helps them:
+
+- avoid “spaghetti” codebases as projects grow,
+- onboard new team members more easily,
+- maintain long-term consistency,
+- integrate with modern tooling (Vite, React Query, Zustand/Recoil, etc.).
+
+### 📌 Source
+
+Bulletproof React is a GitHub project (by Alan A. / “alan2207”), often used as a reference for production-grade React project architecture.
+
+---
+
+Here you go — a clean, combined explanation covering **(1) the architecture**, **(2) the recommended folder structure**, and **(3) the core philosophy & principles** of **Bulletproof React**.
+
+---
+
+# 1. **Bulletproof React Architecture — Full Summary**
+
+Bulletproof React provides an **opinionated architecture** for building scalable React + TypeScript apps. Its goal is to help teams avoid the chaos that happens when a project grows without structure.
+
+At a high level, it encourages:
+
+### **✔ Feature-based organization**
+
+Instead of organizing by technical type (`components/`, `hooks/`, etc.), you organize by domain or feature.
+Each feature maintains its own UI components, hooks, tests, and types.
+
+### **✔ Clear separation of concerns**
+
+It divides app code into layers such as:
+
+- **UI layer** – components, layouts, pages
+- **Hooks layer** – view logic
+- **Services layer** – API calls, caching, business logic
+- **State layer** – React Query, Zustand, or other client state
+- **Utils & shared modules**
+
+This makes the dependencies flow in one direction: **feature → shared**, not the other way around.
+
+### **✔ A consistent approach to:**
+
+- API interaction (via dedicated service modules)
+- Error handling
+- Data fetching and caching (React Query recommended)
+- Environment variables
+- Testing (React Testing Library + Jest)
+- Reusable components (co-located or in a shared library)
+- Types & interfaces
+
+It is less a rigid standard and more a **template for maintainable React codebases**.
+
+---
+
+# 2. **Recommended Folder Structure**
+
+Here is the core structure used in Bulletproof React:
+
+```
+src/
+ ├─ app/               # App-wide providers, routing, entry files
+ ├─ assets/            # Static files (images, icons, fonts)
+ ├─ components/        # Reusable UI components (shared)
+ ├─ config/            # Global config (env vars, constants)
+ ├─ features/          # Feature-based modules
+ │   └─ auth/
+ │        ├─ api/
+ │        ├─ components/
+ │        ├─ hooks/
+ │        ├─ routes/
+ │        ├─ types/
+ │        └─ index.ts
+ ├─ hooks/             # Global (shared) custom hooks
+ ├─ lib/               # 3rd-party wrappers and utilities
+ ├─ providers/         # App-level React providers
+ ├─ routes/            # Route definitions & layout organization
+ ├─ services/          # External API services (HTTP clients)
+ ├─ stores/            # Global state (Zustand/Recoil/etc.)
+ ├─ types/             # Global TypeScript definitions
+ └─ utils/             # Pure utility functions
+```
+
+### Key ideas in the structure:
+
+- Every **feature** is self-contained and can include:
+  - UI components
+  - state logic
+  - API abstraction
+  - types
+  - tests
+  - utilities
+
+- The **shared** folders (`components/`, `utils/`, `types/`) hold code reused by multiple features.
+
+- All external dependencies (e.g., Axios, Zod) get wrapped in `lib/` so the rest of the app doesn’t depend on library internals.
+
+- The `app/` directory is the entry point for:
+  - router
+  - global providers
+  - global styles
+  - theme
+
+This structure scales smoothly as you add more features.
+
+---
+
+# 3. **Philosophy & Key Principles**
+
+### **1. Feature Isolation**
+
+Keep features modular and self-contained.
+This makes both scaling and refactoring easier.
+
+### **2. Minimize global/shared code**
+
+Global code increases coupling.
+Only share code that truly needs to be reused across features.
+
+### **3. Explicit boundaries**
+
+Use:
+
+- dedicated API modules,
+- separate data-fetching logic,
+- type-safe DTOs,
+- clear public interfaces (`index.ts` entrypoints).
+
+This helps enforce directionality and prevents spaghetti imports.
+
+### **4. Predictability over cleverness**
+
+The architecture favors:
+
+- consistent patterns,
+- readable abstractions,
+- minimal “magic,”
+- simple naming conventions.
+
+Engineers should always know where a piece of logic belongs.
+
+### **5. Composition over inheritance**
+
+React apps grow better when small pieces are composed, not inherited or deeply nested.
+
+### **6. Testability**
+
+Keeping logic separated (UI vs. hooks vs. data) makes everything easier to test.
+
+### **7. Scalability through boundaries**
+
+By grouping code by business domain, not technical type, the project scales naturally with feature growth.
+
+---
+
+Here you go — a clean, combined explanation covering **(1) the architecture**, **(2) the recommended folder structure**, and **(3) the core philosophy & principles** of **Bulletproof React**.
+
+---
+
+# 1. **Bulletproof React Architecture — Full Summary**
+
+Bulletproof React provides an **opinionated architecture** for building scalable React + TypeScript apps. Its goal is to help teams avoid the chaos that happens when a project grows without structure.
+
+At a high level, it encourages:
+
+### **✔ Feature-based organization**
+
+Instead of organizing by technical type (`components/`, `hooks/`, etc.), you organize by domain or feature.
+Each feature maintains its own UI components, hooks, tests, and types.
+
+### **✔ Clear separation of concerns**
+
+It divides app code into layers such as:
+
+- **UI layer** – components, layouts, pages
+- **Hooks layer** – view logic
+- **Services layer** – API calls, caching, business logic
+- **State layer** – React Query, Zustand, or other client state
+- **Utils & shared modules**
+
+This makes the dependencies flow in one direction: **feature → shared**, not the other way around.
+
+### **✔ A consistent approach to:**
+
+- API interaction (via dedicated service modules)
+- Error handling
+- Data fetching and caching (React Query recommended)
+- Environment variables
+- Testing (React Testing Library + Jest)
+- Reusable components (co-located or in a shared library)
+- Types & interfaces
+
+It is less a rigid standard and more a **template for maintainable React codebases**.
+
+---
+
+# 2. **Recommended Folder Structure**
+
+Here is the core structure used in Bulletproof React:
+
+```
+src/
+ ├─ app/               # App-wide providers, routing, entry files
+ ├─ assets/            # Static files (images, icons, fonts)
+ ├─ components/        # Reusable UI components (shared)
+ ├─ config/            # Global config (env vars, constants)
+ ├─ features/          # Feature-based modules
+ │   └─ auth/
+ │        ├─ api/
+ │        ├─ components/
+ │        ├─ hooks/
+ │        ├─ routes/
+ │        ├─ types/
+ │        └─ index.ts
+ ├─ hooks/             # Global (shared) custom hooks
+ ├─ lib/               # 3rd-party wrappers and utilities
+ ├─ providers/         # App-level React providers
+ ├─ routes/            # Route definitions & layout organization
+ ├─ services/          # External API services (HTTP clients)
+ ├─ stores/            # Global state (Zustand/Recoil/etc.)
+ ├─ types/             # Global TypeScript definitions
+ └─ utils/             # Pure utility functions
+```
+
+### Key ideas in the structure:
+
+- Every **feature** is self-contained and can include:
+  - UI components
+  - state logic
+  - API abstraction
+  - types
+  - tests
+  - utilities
+
+- The **shared** folders (`components/`, `utils/`, `types/`) hold code reused by multiple features.
+
+- All external dependencies (e.g., Axios, Zod) get wrapped in `lib/` so the rest of the app doesn’t depend on library internals.
+
+- The `app/` directory is the entry point for:
+  - router
+  - global providers
+  - global styles
+  - theme
+
+This structure scales smoothly as you add more features.
+
+---
+
+# 3. **Philosophy & Key Principles**
+
+### **1. Feature Isolation**
+
+Keep features modular and self-contained.
+This makes both scaling and refactoring easier.
+
+### **2. Minimize global/shared code**
+
+Global code increases coupling.
+Only share code that truly needs to be reused across features.
+
+### **3. Explicit boundaries**
+
+Use:
+
+- dedicated API modules,
+- separate data-fetching logic,
+- type-safe DTOs,
+- clear public interfaces (`index.ts` entrypoints).
+
+This helps enforce directionality and prevents spaghetti imports.
+
+### **4. Predictability over cleverness**
+
+The architecture favors:
+
+- consistent patterns,
+- readable abstractions,
+- minimal “magic,”
+- simple naming conventions.
+
+Engineers should always know where a piece of logic belongs.
+
+### **5. Composition over inheritance**
+
+React apps grow better when small pieces are composed, not inherited or deeply nested.
+
+### **6. Testability**
+
+Keeping logic separated (UI vs. hooks vs. data) makes everything easier to test.
+
+### **7. Scalability through boundaries**
+
+By grouping code by business domain, not technical type, the project scales naturally with feature growth.
+
+---
+
+# Bulletproof React Starter Template
+
+A clean, scalable, and production-friendly React architecture inspired by **Bulletproof React**. This template provides a strong foundation for building large React applications with predictable structure, modular features, and maintainable code.
+
+---
+
+## 🚀 Features
+
+- **Feature-based architecture** for scalable, maintainable code
+- **React + TypeScript** setup
+- **React Router** for routing
+- **React Query** for server state management
+- **Axios** wrapped in a clean HTTP client
+- **Self-contained features** (API, hooks, types, components)
+- **Shared utilities** (e.g., `cn` className helper)
+- **Provider pattern** for global state/libraries
+- Ready for: shadcn/ui, Zustand, Zod, or your preferred tools
+
+---
+
+## 📁 Folder Structure
+
+```
+src/
+ ├─ app/               # App entry, router, global providers
+ ├─ assets/            # Images, fonts, global styles
+ ├─ components/        # Shared UI components
+ ├─ config/            # Global configuration (env, constants)
+ ├─ features/          # Feature-based modules
+ ├─ hooks/             # Global reusable hooks
+ ├─ lib/               # Library wrappers (e.g., axios client)
+ ├─ providers/         # App-level providers (React Query, theme, etc.)
+ ├─ routes/            # Page-level routes and layouts
+ ├─ services/          # External service layer (API abstractions)
+ ├─ stores/            # Global state stores
+ ├─ types/             # Global TypeScript definitions
+ └─ utils/             # Reusable utility functions
+```
+
+This structure scales well as your project grows and encourages good architectural boundaries.
+
+---
+
+## 🛠️ Tech Stack
+
+- **React 18**
+- **TypeScript**
+- **Vite** (recommended for use)
+- **React Router**
+- **React Query**
+- **Axios**
+
+---
+
+## 📦 Installation
+
+```bash
+git clone <your-repo-url>
+cd bulletproof-react-starter
+npm install
+npm run dev
+```
+
+---
+
+## 🧩 Example Feature Structure
+
+Each feature is isolated and contains everything related to that domain:
+
+```
+features/example/
+ ├─ api/
+ ├─ components/
+ ├─ hooks/
+ ├─ types/
+ └─ index.ts
+```
+
+Example uses React Query + Axios to fetch and cache data cleanly.
+
+---
+
+## 🌐 Environment Variables
+
+Create a `.env` file at the root:
+
+```
+VITE_API_URL=https://your.api
+```
+
+---
+
+## 🧰 Scripts
+
+```bash
+npm run dev       # Start development server
+npm run build     # Production build
+npm run preview   # Preview the build
+```
+
+---
+
+## 🧪 Testing (Optional Recommendation)
+
+This template is compatible with:
+
+- **Vitest**
+- **React Testing Library**
+- **MSW** for API mocking
+
+Testing is not included by default but can be added easily.
+
+---
+
+## 🏗️ Extending the Template
+
+You can integrate:
+
+- **shadcn/ui** (highly recommended)
+- **Zustand or Jotai** for global state
+- **Zod** for schema validation
+- **TanStack Router** (alternative to React Router)
+- **Feature-based design tokens**
+
+If you'd like, I can generate an extended version with these tools.
+
+---
+
+## 📜 License
+
+MIT — free to use, modify, and distribute.
+
+---
+
+## ⭐ Support
+
+If you like this architecture or want improvements:
+
+- Star the repo
+- Open issues
+- Submit pull requests
+
+Happy building! ⚡
